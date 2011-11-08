@@ -1,0 +1,54 @@
+<project name="SocialSnapshot" default="dist" basedir=".">
+    <description>
+        Builds SocialSnapshot
+    </description>
+  <!-- set global properties for this build -->
+  <property name="src" location="SocialSnapshot/src"/>
+  <property name="build" location="build"/>
+  <property name="dist"  location="dist"/>
+  <property name="jarname" location="${dist}/SocialSnapshot-${DSTAMP}.jar" />
+  <property name="main-class" value="org.sbaresearch.socialsnapshot.SocialSnapshot" />
+  <path id="classpath">
+    <fileset dir="lib/" includes="*jar" />
+  </path>
+
+  <target name="init">
+    <!-- Create the time stamp -->
+    <tstamp/>
+    <!-- Create the build directory structure used by compile -->
+    <mkdir dir="${build}"/>
+  </target>
+
+  <target name="compile" depends="init"
+        description="compile the source " >
+<!-- Compile the java code from ${src} into ${build} -->
+    <javac srcdir="${src}" destdir="${build}" classpathref="classpath" />
+  </target>
+
+  <target name="dist" depends="compile"
+        description="generate the distribution" >
+    <!-- Create the distribution directory -->
+    <mkdir dir="${dist}"/>
+
+    <jar jarfile="${jarname}" basedir="${build}" >
+        <manifest>
+	    <attribute name="Main-Class" value="${main-class}" />
+        </manifest>
+    </jar>
+  </target>
+  
+  <target name="run" depends="dist">
+    <java fork="true" classname="${main-class}">
+      <classpath>
+        <path refid="classpath"/>
+        <path location="${jarname}"/>
+      </classpath>
+    </java>
+  </target>
+
+  <target name="clean"
+        description="clean up" >
+    <delete dir="${build}"/>
+    <delete dir="${dist}"/>
+  </target>
+</project>
