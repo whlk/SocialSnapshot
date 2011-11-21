@@ -1,0 +1,20 @@
+-- NOTE: http://address.yahoo.com/?_src=&VPC=contact_import_landing
+
+Fill id=username with "socialsnapshottool@yahoo.com" and id=passwd with "qrO[k7iOg", click id=.save
+wait for existence of id=allcontact-peoplemover
+click id=allcontact-peoplemover
+wait
+select frame //iframe[@id='fb_iframe']
+click //img in that frame
+wait for popup
+????
+
+
+kontakte finden: 
+http://address.yahoo.com/
+wait for id=yui-gen0_li:0
+for each contact:
+	open http://address.yahoo.com/?_src=&_partner=generic_intl&_intl=us&search=[URLENCODED NAME]
+	wait for existence of id=yui-gen0_li:0
+	store text of //div[@id='yui-gen0_li:0']/div/div/span -> mail
+
