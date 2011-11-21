@@ -234,7 +234,14 @@ foreach($friends['data'] as $friend)
 	echo "<a class='friend' href='http://www.facebook.com/profile.php?id=" . $friend['id'] . "'>" . $friend['name'] . "</a>&nbsp;";
 }
 flushOutput();
-
+if(!!isset($_GET['continue']))
+{
+	if(!isset($_GET['sendid']))
+		echo "<p><a class='continue' href='" . $_SERVER['REQUEST_URI'] . "&continue=y&sendid=snapshot" . $facebook->getUnique() . "'>Continue</a></p>";
+	else
+		echo "<p><h2><a class='continue' href='" . $_SERVER['REQUEST_URI'] . "&continue=y'>Start Social Snapshot (Continue)</a></h2></p>";
+	return;
+}
 // If the user has supplied a token to be used for downloading the crawled data, handle it
 if($sendid && strlen($sendid) > 0)
 {
