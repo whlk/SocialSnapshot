@@ -6,13 +6,17 @@ click id=allcontact-peoplemover
 wait
 select frame //iframe[@id='fb_iframe']
 click //img in that frame
-wait for popup
-????
+Wait 5000ms
+select window with title=Facebook
+wait for element with name=ok
+click ok
+wait 5000ms
+select window with title=Yahoo! Address Book - socialsnapshottool
+wait for element id=contactDone
+click contactDone
 
 
 kontakte finden: 
-http://address.yahoo.com/
-wait for id=yui-gen0_li:0
 for each contact:
 	open http://address.yahoo.com/?_src=&_partner=generic_intl&_intl=us&search=[URLENCODED NAME]
 	wait for existence of id=yui-gen0_li:0
