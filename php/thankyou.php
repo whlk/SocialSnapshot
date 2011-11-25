@@ -16,9 +16,10 @@
     You should have received a copy of the GNU General Public License
     along with SocialSnapshot.  If not, see <http://www.gnu.org/licenses/>.*/
 
-// This file is partially based on example FB Graph code by Facebook, Inc.,
-// licensed under the Apache License, Version 2.0.
-// Original code at https://github.com/facebook/php-sdk/blob/master/examples/example.php
+//Header for utf-8 support and caching disabled
+header("Content-type: text/html; charset=utf-8");
+header("Cache-Control: no-cache, must-revalidate");
+header("Expires: -1");
 ?>
 <!doctype html>
 <html>
@@ -39,10 +40,6 @@ text-decoration: underline;
 </head>
 <body>
 <?php
-//Header for utf-8 support and caching disabled
-header("Content-type: text/html; charset=utf-8");
-header("Cache-Control: no-cache, must-revalidate");
-header("Expires: -1");
 // It's probably a safe assumption to use the & here (instead of checking if we need ?), the Graph API needs the access token in the URL anyway, so there are parameters.
 if(!isset($_GET['snapshotid']) && !isset($_GET['email'])){
 	die("Please run a SocialSnapshot first.");
@@ -50,10 +47,10 @@ if(!isset($_GET['snapshotid']) && !isset($_GET['email'])){
 echo "<h2>Thank you!</h2>";
 echo "<h3>SocialSnapshot App has fetched all required data from Facebook.</h3>";
 if(isset($_GET['snapshotid'])){
-	echo "<h4>Your snapshotid is: " .$_GET['snapshotid'] ."</h4>";
+	echo "<h4>Your snapshotid is: " . htmlentities($_GET['snapshotid']) ."</h4>";
 }
 if(isset($_GET['email'])){
-	echo "<h4>You should soon receive an email to: " . $_GET['email'] . ", with a link to download your social snapshot.</h4>";
+	echo "<h4>You should soon receive an email to: " . htmlentities($_GET['email']) . ", with a link to download your social snapshot.</h4>";
 }
 ?>
 </body>
