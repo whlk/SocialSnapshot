@@ -6,15 +6,16 @@ import java.io.FileInputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
-import org.openqa.selenium.NoSuchElementException;
 import java.util.Properties;
 import java.util.Set;
 
+import org.apache.commons.lang.StringUtils;
 import org.openqa.selenium.By;
 import org.openqa.selenium.Cookie;
+import org.openqa.selenium.NoSuchElementException;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.firefox.FirefoxDriver;
@@ -31,6 +32,7 @@ import com.thoughtworks.selenium.Selenium;
  * You need to start a Selenium server on the default port before launching this application.
  * 
  * @author mleithner@sba-research.org
+ * @author Maurice Wohlkönig <mannaz@falott.com>
  * 
  */
 public class SocialSnapshot {
@@ -39,7 +41,7 @@ public class SocialSnapshot {
 	 */
 	static boolean fromLogin = false;
 
-	/*
+	/**
 	 * The application id for log-out ccs,div will be set by your config file
 	 */
 	// XXX: If you are not sure where to find the
@@ -48,19 +50,14 @@ public class SocialSnapshot {
 	// "Applications" settings.
 	static String appid = "";
 
-	static String yahooUser = "socialsnapshottool@yahoo.com";
-
-	static String yahooPassword = "qrO[k7iOg";
-
 	// The path to your FB application, i.e. where you installed SocialSnapshot to.
 	// XXX: You definitely do want to change this. Unless you feel like pushing
 	// your data over to us...in which case you give SBA Research consent to use it for
 	// anonymised research purposes.
+	/**
+	 * The url of the graph tool. (Should most probalby match the tool with the appid). Will be set by the config file.
+	 */
 	static String graphHost = "http://socialsnapshot.mannaz.at/php/";
-
-	// Host and Port of the selenium server instance the client connects to
-	static String serverHost = "localhost";
-	static int serverPort = 4444;
 
 	/*
 	 * Timeout for application removal
@@ -70,6 +67,12 @@ public class SocialSnapshot {
 	// static Integer apptimeout = 30;
 	// No timeout for now
 	static Integer apptimeout = 0;
+
+	/**
+	 * Determines if the graphHostApp (specified above) should be started after added to the facebook profile of the
+	 * user.
+	 */
+	static boolean startGraphHostApp = false;
 
 	/**
 	 * A number of cookie names that should be set in order to be able to access Facebook via Header Injection.
@@ -94,6 +97,15 @@ public class SocialSnapshot {
 		SocialSnapshot.cookieNames.add("presence");
 		// SocialSnapshot.cookieNames.add("wd");
 	};
+
+	/**
+	 * Defines which and in which order profile info data should be saved to the logfile.
+	 */
+	private static final String[] RELEVANT_INFO_LABELS = new String[] { "Name", "Geschlecht", "Telefon", "Nutzername",
+			"E-Mail", "Anschrift", "Webseite", "Schule", "Hochschule", "Arbeitgeber", "Aktivitäten", "Fernsehen",
+			"Filme", "Musik", "Spiele", "Lieblingssportler", "Lieblingszitate", "Lieblingsmannschaften", "Jahrestag",
+			"Beziehungsstatus", "Interessen", "Sonstiges", "Politische Einstellung", "Religiöse Ansichten",
+			"Interessiert an" };
 
 	/**
 	 * Displays the given error message and terminates the program. Ugly hack.
@@ -127,13 +139,7 @@ public class SocialSnapshot {
 			// Parse the config options
 			graphHost = config.getProperty("graphHost");
 			appid = config.getProperty("appid");
-			// Optional settings to override default selenium server settings.
-			if (config.containsKey("serverHost")) {
-				serverHost = config.getProperty("serverHost");
-			}
-			if (config.containsKey("serverPort")) {
-				serverPort = Integer.parseInt(config.getProperty("serverPort"));
-			}
+			startGraphHostApp = !config.getProperty("graphHostAppAutostart", "false").equals("false");
 
 		} catch (IOException ex) {
 			System.out.println("SocialSnapshot configuration file not found or malformed (\'socialsnapshot.config\').");
@@ -249,6 +255,9 @@ public class SocialSnapshot {
 		friendUrls = SocialSnapshot.fetchFriendUrls(driver, "friend");
 		friendNames = SocialSnapshot.fetchFriendNames(driver, "friend");
 
+		if (startGraphHostApp)
+			startGraphHostAppInNewWinndow(driver.getCurrentUrl());
+
 		// If we managed to fetch links to friend profiles
 		if (friendUrls != null && friendUrls.size() > 0) {
 			try {
@@ -260,6 +269,15 @@ public class SocialSnapshot {
 				// Create file for logs
 				FileWriter fstream = new FileWriter("results/" + nonce + ".csv");
 				BufferedWriter logfile = new BufferedWriter(fstream);
+
+				// crate header in logfile
+				for (String title : RELEVANT_INFO_LABELS) {
+					logfile.write(title + ";");
+				}
+				logfile.write("\n");
+				logfile.flush();
+
+				HashMap<String, String> dataSaveTmp;
 
 				// Iterate over them
 				for (String link : friendUrls) {
@@ -275,24 +293,54 @@ public class SocialSnapshot {
 
 					// Username from page title
 					String name = driver.getTitle();
-
-					String emails = "";
-					String instant = "";
-					String mailimgurls = "";
-					String phones = "";
-					// String result = "";
-					// List of Instant Names from FB
-					List<String> instantNames = Arrays.asList("AIM", "Google Talk", "Windows Live Messenger", "Skype",
-							"Yahoo! Messenger", "Gadu-Gadu", "ICQ", "Yahoo Japan", "QQ", "NateOn", "Twitter", "Hyves",
-							"Orkut", "Cyworld", "mixi", "QIP", "Rediff Bol", "Vkontakte");
+					dataSaveTmp = new HashMap<String, String>(); // create a new empty temp data save for this user
+					logAndPrint(name, nonce);
+					dataSaveTmp.put("Name", name);
 
 					try {
-						List<WebElement> elems = driver.findElements(By.id("pagelet_contact"));
-						logAndPrint(name, nonce);
-					} catch (NoSuchElementException e) {
+						// get all info tables (there are sometimes more of them [new facebook timeline forx])
+						List<WebElement> elems = driver.findElements(By.cssSelector(".uiInfoTable.profileInfoTable"));
+						List<WebElement> labels;
+						List<WebElement> data;
+						for (WebElement element : elems) {
+							// find the data entries with their in this table
+							labels = element.findElements(By.className("label"));
+							data = element.findElements(By.className("data"));
+							for (int c = 0; c < labels.size(); c++) {
+								try {
+									// System.out.println(" " + labels.get(c).getText() + ": "
+									// + stripJunk(data.get(c).getText()));
+									// save the data
+									dataSaveTmp.put(stripJunk(labels.get(c).getText()),
+											stripJunk(data.get(c).getText()));
+								} catch (IndexOutOfBoundsException e) {
+									System.out.println("No data for label " + labels.get(c).getText());
+								}
+							}
+						}
 
+						// save the relevant data to the logfile
+						for (String title : RELEVANT_INFO_LABELS) {
+							if (dataSaveTmp.containsKey(title)) {
+								logfile.write(dataSaveTmp.get(title));
+								dataSaveTmp.remove(title);
+							}
+							logfile.write(";");
+						}
+						logfile.write("\n");
+						logfile.flush();
+
+						if (dataSaveTmp.size() > 0) {
+							logAndPrint(" unused data fields: " + StringUtils.join(dataSaveTmp.keySet(), ", "), nonce);
+						}
+
+					} catch (NoSuchElementException e) {
+						logAndPrint("NoSuchElementException for .uiInfoTable.profileInfoTable", nonce);
 					}
 				}
+
+				// Close the output stream
+				logfile.close();
 			} catch (Exception e) {
 				logAndPrint("exception " + e.getMessage(), nonce);
 			}
@@ -300,6 +348,30 @@ public class SocialSnapshot {
 			logAndPrint("We got no friends ... forever alone :(", nonce);
 	}
 
+	/**
+	 * Starts the collection process of the newly added GraphHostApp in a new window.
+	 */
+	private static void startGraphHostAppInNewWinndow(String graphUrl) {
+		WebDriver driver = new FirefoxDriver();
+		driver.get(graphUrl);
+		driver.findElement(By.id("continue")).click();
+	}
+
+	/**
+	 * Removes data which could possible fck up the csv file
+	 * 
+	 * @param text input string
+	 * @return nice
+	 */
+	private static String stripJunk(String text) {
+		return text.replace("\n", ", ").replace(";", ",");
+	}
+
+	/**
+	 * Prints currently saved cookies
+	 * 
+	 * @param driver
+	 */
 	private static void printCookies(WebDriver driver) {
 		System.out.println("-------\nCookies for current Site (" + driver.getCurrentUrl() + "):");
 		// output all the available cookies for the current URL
