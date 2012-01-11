@@ -176,9 +176,8 @@ public class SocialSnapshot {
 							+ "Usage:\n"
 							+ "java -jar socialsnapshot.jar <cookie>\n"
 							+ "java -jar socialsnapshot.jar <mail> <password>\n"
-							+ "\n\nSocialSnapshot logs into a Facebook account (or simply uses a cookie you sniffed off the wire), grabs all mail adresses of this account's friends and crawls data using the Graph API.\n"
-							+ "Please note that you'll have to start a Selenium server before using this tool.\n"
-							+ "You can start a Selenium server by using java -jar selenium-server.jar.");
+							+ "\n\nSocialSnapshot logs into a Facebook account (or simply uses a cookie you sniffed off the wire), "
+							+ "grabs all mail adresses of this account's friends and crawls data using the Graph API.\n");
 			System.exit(0);
 		}
 
